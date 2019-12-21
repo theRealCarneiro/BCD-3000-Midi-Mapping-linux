@@ -53,6 +53,7 @@ int getMidiInput(char buffer[1], int status, snd_rawmidi_t *midiin, snd_rawmidi_
 	int i = 0;
 	int led = 0;
 	char noteon[3];//  = {0xB0, 17, 127};
+	int key;
 	while (i < 3){
         if ((status = snd_rawmidi_read(midiin, buffer, 1)) < 0){
             errormessage("Problem reading MIDI input: %s", snd_strerror(status));
@@ -66,7 +67,7 @@ int getMidiInput(char buffer[1], int status, snd_rawmidi_t *midiin, snd_rawmidi_
 		}
         
         else if (i == 1){
-			int key = midiValues[(int)buffer[0]];
+			key = midiValues[(int)buffer[0]];
 			if(key > -1)
             	noteon[1] = key;
 		}
@@ -86,7 +87,7 @@ int getMidiInput(char buffer[1], int status, snd_rawmidi_t *midiin, snd_rawmidi_
         fflush(stdout);
 		i++;
     }
-	if(led == 1) {
+	if(led == 1 && key != -1) {
 		if ((status = snd_rawmidi_write(midiout, noteon, 3)) < 0) {
       		errormessage("Problem writing to MIDI output: %s", snd_strerror(status));
       		exit(1);
