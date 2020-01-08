@@ -28,8 +28,18 @@ int ledStatus[37] = { //-1 = no led, 0 = led off, 127 = led on
 };
 
 int main (int argc, char *argv[]){
+	system("amidi -l | grep BCD | cut -c5-12 >> hw.txt");
+     FILE *fp;
+     char hw[10];
+     int i = 0;
+	fp = fopen("hw.txt","rt");
+	while((hw[i] = fgetc(fp)) != EOF) i++;
+	hw[8] = '\0';
+	fclose(fp);
+	remove("hw.txt");
+
 	int status;
-	const char* portname = "hw:0,0,0";
+	const char* portname = hw;
 	if(argc > 1){
 		startMidi(argv[1]);
 	}
@@ -42,12 +52,8 @@ void startMidi(const char* portname){ //Starts the midi conection
 	snd_rawmidi_t *midiin = NULL;
 	snd_rawmidi_t *midiout = NULL;
 	if ((status = snd_rawmidi_open(&midiin, &midiout, portname, mode)) < 0){
-		if ((status = snd_rawmidi_open(&midiin, &midiout, "hw:1,0,0", mode)) < 0){
-			if ((status = snd_rawmidi_open(&midiin, &midiout, "hw:2,0,0", mode)) < 0){
-				errormessage("Problem opening MIDI input: %s", snd_strerror(status));
-				exit(1);
-			}
-		}
+		errormessage("Problem opening MIDI input: %s", snd_strerror(status));
+		exit(1);
 	}
 
 	system("sleep 5");
