@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "bcdHeader.h"
-#include "jackHeader.h"
-
 
 int midiValues[37] = { //-1 equals no led
 	-1, -1, -1, -1, -1,
@@ -40,7 +38,7 @@ int main (int argc, char *argv[]){
 
 	int status;
 	const char* portname = hw;
-	if(argc > 1){
+	if(argc > 1){ //if port was submited as arg
 		startMidi(argv[1]);
 	}
 	else startMidi(portname);
@@ -56,7 +54,6 @@ void startMidi(const char* portname){ //Starts the midi conection
 		exit(1);
 	}
 
-	system("sleep 5");
 	char buffer[1];      // Storage for input buffer received
 	while(1){
 		getMidiInput(buffer, status, midiin, midiout);
@@ -66,7 +63,7 @@ void startMidi(const char* portname){ //Starts the midi conection
 int getMidiInput(char buffer[1], int status, snd_rawmidi_t *midiin, snd_rawmidi_t *midiout){
 	int i = 0;
 	int led = 0;
-	int isVolume = 0;
+	int buttonPressed;
 	char noteon[3]; //ex: {0xB0, 17, 127};
 	int key;
 
@@ -77,11 +74,9 @@ int getMidiInput(char buffer[1], int status, snd_rawmidi_t *midiin, snd_rawmidi_
 
 		if(i == 0){ //Hex code for the type of message
 			if ((unsigned char)buffer[0] == 0x90){ // we want 0x90 == button press
+				buttonPressed = 1;
 				led = 1;
 				noteon[0] = 0xB0; //Code for the leds
-			}
-			else if((unsigned char)buffer[0] == 0xB0){
-				isVolume = 1;
 			}
 		}
 
@@ -90,25 +85,23 @@ int getMidiInput(char buffer[1], int status, snd_rawmidi_t *midiin, snd_rawmidi_
 			if(key > -1){
 				noteon[1] = key;
 			}
-			if(isVolume == 1){
-				noteon[1] = (int)buffer[0];
-			}
+			key = (int)buffer[0];
 		}
 
-		else if(isVolume == 0){ //buffer = 127 = button pressed, buffer = 0 = button released
+		//buffer = 127 = button pressed, buffer = 0 = button released
+		else if(buttonPressed == 1){
 			if((int)buffer[0] == 127) {
-				if(ledStatus[(int)buffer[0]] == 0){
-					ledStatus[(int)buffer[0]] = 127;
+				if(ledStatus[key] == 0){
+					ledStatus[key] = 127;
 					noteon[2] = 127;
 				}
-				else if(ledStatus[(int)buffer[0]] == 127){
-					ledStatus[(int)buffer[0]] = 0;
+				else if(ledStatus[key] == 127){
+					ledStatus[key] = 0;
 					noteon[2] = 0;
 				}
 			}
-			midiJack(noteon[1], noteon[2]);
+			buttonPressed = 0;
 		}
-		else noteon[2] = (int)buffer[0];
 		fflush(stdout);
 		i++;
 	}
@@ -118,9 +111,6 @@ int getMidiInput(char buffer[1], int status, snd_rawmidi_t *midiin, snd_rawmidi_
 			errormessage("Problem writing to MIDI output: %s", snd_strerror(status));
 			exit(1);
 		}
-	}
-	else if(isVolume){ //CC command probly means volume
-		volume(noteon);
 	}
 }
 
